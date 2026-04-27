@@ -16,7 +16,7 @@ namespace StackOverFlowReplica.DAL.Repositories
             _db = db;
         }
 
-        public int RegisterUser(User user)
+        public int RegisterUser(Register user)
         {
             int userId = 0;
 
@@ -33,12 +33,10 @@ namespace StackOverFlowReplica.DAL.Repositories
                     command.Parameters.Add(new SqlParameter("@Email", user.Email));
                     command.Parameters.Add(new SqlParameter("@Password", user.Password));
                     command.Parameters.Add(new SqlParameter("@Bio", user.Bio));
-                    command.Parameters.Add(new SqlParameter("RoleId", 1));
-                    command.Parameters.Add(new SqlParameter("isActive", 1));
-                    command.Parameters.Add(new SqlParameter("isActiveBy", 1));
-
-
-
+                    command.Parameters.Add(new SqlParameter("@RoleId", 2));
+                    command.Parameters.Add(new SqlParameter("@isActive", 1));
+                    command.Parameters.Add(new SqlParameter("@isActiveBy", 1));
+                    command.Parameters.Add(new SqlParameter("@Tags",user.Tags != null ? string.Join(",", user.Tags) : ""));
 
                     if (connection.State == ConnectionState.Closed)
                     {

@@ -20,7 +20,7 @@ namespace StackOverFlowReplica.BLL.Services
             _config = config;
         }
 
-        public int Register(User user)
+        public int Register(Register user)
         {
 
             return _repo.RegisterUser(user);
@@ -84,7 +84,7 @@ namespace StackOverFlowReplica.BLL.Services
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddHours(2),
+                expires: DateTime.Now.AddHours(8),
                 signingCredentials: creds
             );
 

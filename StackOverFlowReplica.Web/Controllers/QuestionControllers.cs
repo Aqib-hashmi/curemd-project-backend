@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using StackOverFlowReplica.BLL.Services;
 using StackOverFlowReplica.Models.payloadModel;
 using StackOverFlowReplica.StackOverFlowReplica.Models;
@@ -19,41 +20,44 @@ namespace StackOverFlowReplica.StackOverFlowReplica.Web.Controllers
         }
 
 
-        [HttpPost("Create")]
-        public IActionResult Create([FromBody] CreateQuestion dto)
+        [HttpPost("CreateQuestion")]
+        [Authorize]
+        public IActionResult CreateQuestion([FromBody] CreateQuestion dto)
         {
             try
             {
-                // Get the logged-in user ID
-                //var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var userId = 20;
-                var newQuestion = new Question
-                {
-                    Title = dto.Title,
-                    Description = dto.Description,
-                    UserId = userId // optional, assign the user ID
-                };
+                if (dto.TagIds == null || !dto.TagIds.Any())
+                    return BadRequest(new { message = "At least one tag is required" });
 
-                var id = _service.CreateQuestion(newQuestion);
+                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                //var userId = 20;
 
-                return Ok(new { message = "Question created successfully", QuestionId = id });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
+                var questionId = _service.CreateQuestion(dto, userId);
+
+                return Ok(new { message = "Question created", questionId });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = ex.Message });
+                return StatusCode(500, ex.Message);
             }
         }
 
 
+        [HttpGet("recommended")]
         [HttpGet("GetAllQuestions")]
-        public IActionResult GetAllQuestions()
+        [AllowAnonymous]
+        public IActionResult GetRecommendedQuestions([FromQuery] int pageNumber,[FromQuery] int pageSize, [FromQuery] string? tagName = null)
         {
-            var result = _service.GetAllQuestions();
 
+            int? userId = null;
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null)
+            {
+                userId = int.Parse(userIdClaim.Value);
+            }
+
+            var result = _service.GetAllQuestions(userId, pageNumber, pageSize,tagName);
             if (!result.Any())
                 return NotFound(new { message = "No questions found" });
 
@@ -61,33 +65,127 @@ namespace StackOverFlowReplica.StackOverFlowReplica.Web.Controllers
         }
 
 
-        [HttpGet("GetQuestionById/{QuestionId}")]
-        public IActionResult GetQuestionById(int QuestionId)
+        [HttpGet("QuestionDetail/{questionId}")]
+        public IActionResult GetQuestionDetail(int questionId)
+        {
+            var result = _service.GetQuestionDetail(questionId);
+
+            if (result == null)
+                return NotFound(new { message = "Question not found" });
+
+            return Ok(result);
+        }
+
+        [HttpPut("{id}")]
+        [Authorize]
+        public IActionResult UpdateQuestion(int id, [FromBody] UpdateQuestionDto dto)
         {
             try
             {
-                var questions = _service.GetQuestionById(QuestionId);
-                if (questions == null)
-                    return NotFound(new { message = "No questions found" });
+                int currentUserId = int.Parse( User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                string currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+                var (success, message) = _service.UpdateQuestion(id, dto, currentUserId, currentUserRole);
 
-                var response = new
+                if (!success)
                 {
-                    questions.QuestionId,
-                    questions.Title,
-                    questions.Description,
-                    questions.UserId,
-                    questions.Views,
-                    questions.CreatedDate,
-                    questions.UpdatedDate
-                };
+                    if (message == "Unauthorized")
+                        return StatusCode(403, new { message });
 
-                return Ok(response);
+                    return BadRequest(new { message });
+                }
+
+                return Ok(new { message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Server error", error = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize]
+        public IActionResult DeleteQuestion(int id)
+        {
+            try
+            {
+                int currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                string currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+                var (success, message) = _service.deleteQuestion(id, currentUserId, currentUserRole);
+
+                if (!success)
+                {
+                    if (message == "Unauthorized")
+                        return StatusCode(403, new { message });
+
+                    return BadRequest(new { message });
+                }
+
+                return Ok(new { message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Server error", error = ex.Message });
+            }
+        }
+
+        [HttpPost("view")]
+        [Authorize]
+        public IActionResult AddQuestionView([FromBody] AddViewDto dto)
+        {
+            try
+            {
+                int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                var (success, status) = _service.AddQuestionView(dto.QuestionId, userId);
+
+                return Ok(new { status });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = ex.Message });
             }
         }
+
+        //[HttpGet("search")]
+        //public IActionResult SearchQuestions([FromQuery] int tagId)
+        //{
+        //    var result = _service.SearchQuestionsByTag(tagId);
+        //    return Ok(result);
+        //}
+
+
+
+
+
+
+
+        //[HttpGet("GetQuestionById/{QuestionId}")]
+        //public IActionResult GetQuestionById(int QuestionId)
+        //{
+        //    try
+        //    {
+        //        var questions = _service.GetQuestionById(QuestionId);
+        //        if (questions == null)
+        //            return NotFound(new { message = "No questions found" });
+
+        //        var response = new
+        //        {
+        //            questions.QuestionId,
+        //            questions.Title,
+        //            questions.Description,
+        //            questions.UserId,
+        //            questions.Views,
+        //            questions.CreatedDate,
+        //            questions.UpdatedDate
+        //        };
+
+        //        return Ok(response);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = ex.Message });
+        //    }
+        //}
 
     }
 }

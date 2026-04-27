@@ -13,10 +13,20 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Scoped services
+builder.Services.AddScoped<AnswerRepository>();
+builder.Services.AddScoped<AnswerService>();
+builder.Services.AddScoped<CommentRepository>();
+builder.Services.AddScoped<CommentService>();
+builder.Services.AddScoped<SearchRepository>();
+builder.Services.AddScoped<SearchService>();
+builder.Services.AddScoped<VoteRepository>();
+builder.Services.AddScoped<VoteService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<QuestionRepository>();
 builder.Services.AddScoped<QuestionService>();
+builder.Services.AddScoped<TagRepository>();
+builder.Services.AddScoped<TagService>();
 
 // JWT configuration
 var key = builder.Configuration["Jwt:Key"];

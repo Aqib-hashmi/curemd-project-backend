@@ -19,7 +19,7 @@ namespace StackOverFlowReplica.Controllers
         }
 
         [HttpPost("register")]
-        public IActionResult Register([FromBody] User user)
+        public IActionResult Register([FromBody] Register user)
         {
             try 
             {
@@ -43,7 +43,7 @@ namespace StackOverFlowReplica.Controllers
             {
                 return BadRequest(new
                 {
-                    message = ex.Message   // 👈 frontend ko ye milega
+                    message = ex.Message  
                 });
             }
         }
@@ -52,7 +52,9 @@ namespace StackOverFlowReplica.Controllers
         public IActionResult Login([FromBody] UserRequest request)
         {
             if (!ModelState.IsValid)
+            {
                 return BadRequest(ModelState);
+            }
 
             string? errorMessage;
             var userData = _service.Login(request.Email, request.Password, out errorMessage);
@@ -101,6 +103,8 @@ namespace StackOverFlowReplica.Controllers
 
             return Ok(result);
         }
+
+
         [HttpGet("Profile/{userId}")]
         public IActionResult GetUserById(int userId)
         {
@@ -122,8 +126,6 @@ namespace StackOverFlowReplica.Controllers
                 user.UpdatedDate
             });
         }
-
-     
         [HttpPut("Update")]
         public IActionResult UpdateUser([FromBody] User user)
         {

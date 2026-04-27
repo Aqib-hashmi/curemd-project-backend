@@ -14,78 +14,79 @@ namespace StackOverFlowReplica.BLL.Services
             _config = config;
             _questionRepo = questionRepo;
         }
+         public int CreateQuestion(CreateQuestion dto, int userId)
+            {
+                string tagIds = string.Join(",", dto.TagIds);
 
-        public int CreateQuestion(Question q)
+                return _questionRepo.CreateQuestion(
+                    dto.Title,
+                    dto.Description,
+                    userId,
+                    tagIds
+                );
+            }
+
+
+        public List<Question> GetAllQuestions(int? userId, int pageNumber, int pageSize,string? tagName)
         {
-            if (q == null)
-            {
-                throw new ArgumentException("Invalid request.");
-            }
+            return _questionRepo.GetAllQuestions(userId, pageNumber, pageSize,tagName);
+        }
 
-            if (string.IsNullOrWhiteSpace(q.Title))
-            {
-                throw new ArgumentException("Title is required.");
-            }
+        public QuestionDetailDto GetQuestionDetail(int questionId)
+        {
+            return _questionRepo.GetQuestionDetail(questionId);
+        }
 
-            if (string.IsNullOrWhiteSpace(q.Description))
-            {
-
-                throw new ArgumentException("Description is required.");
-            }
-
-            if (q.Title.Length > 200)
-            {
-
-                throw new ArgumentException("Title cannot exceed 200 characters.");
-            }
-
-            if (q.Description.Length > 2000)
-            {
-
-                throw new ArgumentException("Description cannot exceed 2000 characters.");
-            }
-
-            if (q.UserId <= 0)
-            {
-
-                throw new ArgumentException("Invalid UserId.");
-            }
-
-            return _questionRepo.CreateQuestion(q);
+        public (bool success, string status) AddQuestionView(int questionId, int userId)
+        {
+            var status = _questionRepo.AddQuestionView(questionId, userId);
+            return (true, status);
         }
 
 
-        public List<Question> GetAllQuestions()
+        public (bool success, string message) UpdateQuestion(int questionId, UpdateQuestionDto dto, int currentUserId, string currentUserRole)
         {
-            var questions = _questionRepo.GetAllQuestions();
+            if (string.IsNullOrWhiteSpace(dto.Title))
+                return (false, "Title required hai");
 
-            return questions.Select(q => new Question
-            {
-                QuestionId = q.QuestionId,
-                Title = q.Title,
-                Description = q.Description,
-                Views = q.Views,
-                UserId = q.UserId,
-                CreatedDate = q.CreatedDate,
-                UpdatedDate = q.UpdatedDate,
-                Owner = new User
-                {
-                    UserId = q.Owner.UserId,
-                    Name = q.Owner.Name,
-                    Email = q.Owner.Email,
-                    Password = q.Owner.Password,
-                    RoleId = q.Owner.RoleId,
-                    Bio = q.Owner.Bio,
-                    isActive = q.Owner.isActive
-                }
-            }).ToList();
+            if (string.IsNullOrWhiteSpace(dto.Description))
+                return (false, "Description required hai");
+
+            if (dto.TagIds == null || dto.TagIds.Count == 0)
+                return (false, "Kam se kam ek tag select karo");
+
+            bool isOwner = _questionRepo.IsQuestionOwner(questionId, currentUserId);
+            bool isAdmin = currentUserRole == "Admin" || currentUserRole == "1";
+
+            if (!isOwner && !isAdmin)
+                return (false, "Unauthorized");
+
+            bool result = _questionRepo.UpdateQuestion(questionId, dto);
+
+            return result
+                ? (true, "Question updated successfully")
+                : (false, "Update failed");
         }
 
-
-        public Question? GetQuestionById(int questionId)
+        public (bool success, string message) deleteQuestion(int questionId, int currentUserId, string currentUserRole)
         {
-            return _questionRepo.GetUserById(questionId);
+
+            bool isOwner = _questionRepo.IsQuestionOwner(questionId, currentUserId);
+            bool isAdmin = currentUserRole == "Admin" || currentUserRole == "1";
+
+            if (!isOwner && !isAdmin)
+                return (false, "Unauthorized");
+
+            bool result = _questionRepo.deleteQuestion(questionId,currentUserId);
+
+            return result
+                ? (true, "Question deleted successfully")
+                : (false, "delete failed");
         }
+        //public Question? GetQuestionById(int questionId)
+        //{
+        //    return _questionRepo.GetUserById(questionId);
+        //}
 
         // BLL/Services/AuthService.cs
         //public bool UpdateUser(User user)
